@@ -9,12 +9,17 @@ def AngleD():
 	jnt = mc.ls(sl=True)
 	tar = mc.listRelatives('{}'.format(jnt[0]))
 	par = mc.listRelatives('{}'.format(jnt[0]), p=True)
-	mc.addAttr(ln='bendH', sn='bh', at='doubleAngle', k=True)
-	mc.addAttr(ln='bendV', sn='bv', at='doubleAngle', k=True)
+	mc.addAttr(ln='bendH', sn='bh', at='doubleAngle')
+	mc.addAttr(ln='bendV', sn='bv', at='doubleAngle')
 	mc.addAttr(ln='aimVector', nc=3, at='double3')
 	for i in range(3):
-		tar_jo[i] = mc.getAttr('{0}.jointOrient{1}'.format(tar[0], xyz[i]))
 		mc.addAttr(ln='aimVector{}'.format(xyz[i]), at='double', p='aimVector')
+
+	spc = mc.group(em=True, n='{}_driver'.format(jnt[0]))
+	mc.parent(spc, jnt[0])
+	for i in range(3):
+		mc.setAttr('{0}.translate{1}'.format(spc, xyz[i]), 0)
+		mc.setAttr('{0}.rotate{1}'.format(spc, xyz[i]), 0)
 
 
 	#createNode
@@ -29,12 +34,13 @@ def AngleD():
 	mc.setAttr('{}.normalizeOutput'.format(vep), True)
 
 	#connectAttr
-	mc.connectAttr('{}.matrix'.format(jnt[0]), '{}.matrix'.format(vep))
+	mc.connectAttr('{}.matrix'.format(spc), '{}.matrix'.format(vep))
 	mc.connectAttr('{0}.output[0]'.format(exp), '{}.bendH'.format(jnt[0]))
 	mc.connectAttr('{0}.output[1]'.format(exp), '{}.bendV'.format(jnt[0]))
 	for i in range(3):
 		mc.connectAttr('{0}.output{1}'.format(vep, xyz[i]), '{0}.aimVector{1}'.format(jnt[0], xyz[i]))
 		mc.connectAttr('{0}.aimVector{1}'.format(jnt[0], xyz[i]), '{0}.input[{1}]'.format(exp, i))
+		mc.connectAttr('{0}.rotate{1}'.format(jnt[0], xyz[i]), '{0}.rotate{1}'.format(spc, xyz[i]))
 
 
 	#expression

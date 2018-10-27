@@ -40,7 +40,10 @@ def AngleD():
 	for i in range(3):
 		mc.connectAttr('{0}.output{1}'.format(vep, xyz[i]), '{0}.aimVector{1}'.format(jnt[0], xyz[i]))
 		mc.connectAttr('{0}.aimVector{1}'.format(jnt[0], xyz[i]), '{0}.input[{1}]'.format(exp, i))
+		mc.connectAttr('{0}.translate{1}'.format(jnt[0], xyz[i]), '{0}.translate{1}'.format(spc, xyz[i]))
 		mc.connectAttr('{0}.rotate{1}'.format(jnt[0], xyz[i]), '{0}.rotate{1}'.format(spc, xyz[i]))
+		mc.connectAttr('{0}.scale{1}'.format(jnt[0], xyz[i]), '{0}.scale{1}'.format(spc, xyz[i]))
+		mc.connectAttr('{0}.shear{1}'.format(jnt[0], xyz[i]), '{0}.shear{1}'.format(spc, xyz[i]))
 
 
 	#expression

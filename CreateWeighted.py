@@ -1,166 +1,203 @@
 import maya.cmds as mc
 
 xyz = 'ABCDEFGHIJKLMNOPQRSTUVWXYZ'
-jnt = list(range(0))
-whi = list(range(0))
-jnt_trs = 0
-tar_trs = 0
-num = 0
-exi = 0
-atn = 0
+swt = 0
+def preparation():
+    global sdv, sst, tar, atn, atr, many, tar_trs, sst_mat
 
-def definition():
-	global jnt, tar, num, k, swt
-	k = 0
-	swt = 0
-	jnt = mc.ls(sl=True)
-	num = mc.intField(txt, q=True, v=True)
-	calculation()
+    many = mc.intField(num, q=True, v=True)
 
-def calculation():
-	global jnt, tar, atr, jnt_trs, tar_trs, num, atn, swt
-
-	tar = mc.listRelatives('{}'.format(jnt[k]))
-	atr = mc.listAttr(tar[0], c=True)
-	jnt_trs = mc.getAttr('{}.worldMatrix[0]'.format(jnt[k]))
-	tar_trs = mc.getAttr('{}.translateX'.format(tar[0]))
-	if num > 0:
-		tar_trs = tar_trs / num
-		atn = 1.0000 / num
-	mc.select(cl=True)
-
-	nameEdit()
-
-def nameEdit():
-	global nme, swt
-
-	nme = list(range(0))
-	nme.append(jnt[k].split('_'))
-	if swt != 0:
-		create();
-	else:
-		check()
+    sst = mc.textField(stt, q=True, text=True)
+    tar = mc.textField(end, q=True, text=True)
+    sdv = mc.textField(drv, q=True, text=True)
+    #sst_mat = mc.getAttr('{}.wm'.format(sst))
+    tar_trs = mc.getAttr('{}.tx'.format(tar))
+    atr = mc.listAttr(sdv, c=True)
+    if many != 0:
+        tar_trs = tar_trs / many
+        atn = 1.0000 / many
+    else:
+        tar_trs = 0
+    
+    check()
 
 def check():
-	global jnt, tar, exi, tar_trs, num
-	print 'check'
+    global atn, many, sdv, tar_trs, atr, exi, chk
 
-	rem = list(range(0))
-	exi = 0
-	ajo = mc.ls(typ='joint')
-	cnt = len(ajo)
-	for i in range(cnt):
-		if nme[0][0] + '_weighted' in ajo[i]:
-			rem.append(ajo[i])
-			exi = exi + 1
+    chk = mc.listRelatives('{}'.format(sdv), p=True)
+    kep = mc.listRelatives('{}'.format(chk[0]))
+    exi = 0
 
-	if exi >= 1:
-		for i in range(exi):
-			mc.setAttr('{}.translateX'.format(rem[i]), tar_trs*(i))
+    if 'weighted' in '{}'.format(kep):
+        cnt = len(kep)
+        rem = list(range(0))
 
-	if num < exi:
-		for i in range(exi - num):
-			rmv = exi - i - 1
-			mc.delete('{}'.format(rem[rmv]))
-			if 'weight{}L'.format(xyz[rmv]) in atr:
-				print tar[0]
-				mc.deleteAttr('{0}.weight{1}{2}'.format(tar[0], xyz[rmv], nme[0][1]))
+        for i in range(cnt):
+            if 'weighted' in kep[i]:
+                rem.append(kep[i])
 
-		next()
-	else:
-		create()
+        exi = len(rem)
+    if 'weight' in '{}'.format(atr):
+        atr_cnt = len(atr)
+        wgt_atr = list(range(0))
+        for i in range(atr_cnt):
+            if 'weight' in atr[i]:
+                wgt_atr.append(atr[i])
+
+    if exi >= 1:
+        for i in range(exi):
+            mc.setAttr('{}.tx'.format(rem[i]), tar_trs*(i))
+
+    if many < exi:
+        for i in range(exi - many):
+            rmv = exi - i - 1
+            mc.delete(rem[rmv])
+            if 'weight{}'.format(xyz[rmv]) in wgt_atr[rmv]:
+                mc.deleteAttr('{0}.{1}'.format(sdv, wgt_atr[rmv]))
+            
+        mirror()
+
+    nameEdit()
+
+def nameEdit():
+    global nme, ene
+
+    nme = sdv
+    ene = ''
+    if '_L' in sdv:
+        nme = sdv.replace('_L', '')
+        ene = 'L'
+    if '_R' in sdv:
+        nme = sdv.replace('_R', '')
+        ene = 'R'
+
+    create()
 
 def create():
-	global jnt, tar, atr, wgt, exi, nme, atn
-	wgt = list(range(0))
 
-	for i in range(num):
-		f = i + exi
-		cjo = mc.joint(n='{0}_weighted_{1}{2}'.format(nme[0][0], xyz[f], nme[0][1]), rad=0.3, p=(jnt_trs[12],jnt_trs[13],jnt_trs[14]))
-		pbd = mc.createNode('pairBlend', n='{0}_ifTwistWeightedBlend_{1}{2}'.format(nme[0][0],xyz[f], nme[0][1]))
-		if 'weight{0}{1}'.format(xyz[f], nme[0][1]) not in atr:
-			mc.addAttr('{}'.format(tar[0]), ln='weight{0}{1}'.format(xyz[f], nme[0][1]), min=0, max=1, dv=1)
-		mc.parent('{}'.format(cjo), '{}'.format(jnt[k]))
-		mc.setAttr('{}.translateX'.format(cjo), tar_trs*(f))
-		mc.setAttr('{}.jointOrient'.format(cjo), 0, 0, 0)
-		mc.setAttr('{0}.weight{1}{2}'.format(tar[0], xyz[f], nme[0][1]), atn*i)
-		mc.connectAttr('{0}.weight{1}{2}'.format(tar[0], xyz[f], nme[0][1]), '{}.weight'.format(pbd))
-		mc.connectAttr('{}.rotateX'.format(tar[0]), '{}.inRotate2.inRotateX2'.format(pbd))
-		mc.connectAttr('{}.outRotateX'.format(pbd), '{}.rotateX'.format(cjo))
-		mc.select(cl=True)
-		wgt.append(cjo)
-		if f == num:
-			break
+    wgt = list(range(0))
+    for i in range(many):
+        f = i + exi
 
-	if exi >= 1:
-		mc.delete('{}'.format(cjo))
-		wgt.remove(cjo)
-	next()
+        cjo = mc.joint(n='{0}_weighted_{1}{2}'.format(nme, xyz[f], ene), rad=0.3, p=(0, 0, 0))
+        pbd = mc.createNode('pairBlend', n='{0}_ifTwistWeightedBlend_{1}{2}'.format(sdv,xyz[f], ene))
+        if 'weight{0}{1}'.format(xyz[f], ene) not in atr:
+            mc.addAttr('{}'.format(sdv), ln='weight{0}{1}'.format(xyz[f], ene), min=0, max=1, dv=1)
+        mc.parent('{}'.format(cjo), '{}'.format(chk[0]))
+        mc.setAttr('{}.translate'.format(cjo), 0, 0, 0)
+        mc.setAttr('{}.translateX'.format(cjo), tar_trs*(f))
+        mc.setAttr('{}.jointOrient'.format(cjo), 0, 0, 0)
+        mc.setAttr('{0}.weight{1}{2}'.format(sdv, xyz[f], ene), atn*f)
+        mc.connectAttr('{0}.weight{1}{2}'.format(sdv, xyz[f], ene), '{}.weight'.format(pbd))
+        mc.connectAttr('{}.rotateX'.format(sdv), '{}.inRotate2.inRotateX2'.format(pbd))
+        mc.connectAttr('{}.outRotateX'.format(pbd), '{}.rotateX'.format(cjo))
+        mc.select(cl=True)
+        wgt.append(cjo)
+        if f == many:
+            break
 
-def next():
-	global k, jnt, swt, rim
-	row = len(jnt) - 1
-	if swt != 0:
-		if rim < swt - 1:
-			mirrorCnt()
-	elif k < row:
-		k = k + 1
-		calculation()
+    if exi >= 1:
+        mc.delete('{}'.format(cjo))
+        wgt.remove(cjo)
 
+    mirror()
 
 def mirror():
-	global mrj, jnt, mnt, swt, rim, mir, whi, k
-	mrj = list(range(0))
-	jnt = list(range(0))
-	rim = 0
-	swt = 0
-	f = 0
-	k = 0
+    global tar_trs, sdv, j, swt
 
-	mir = mc.ls(typ='joint')
-	mnt = len(mir)
-	for i in range(mnt):
-		if 'weighted_AL' in mir[i]:
-			whi = mc.listRelatives('{}'.format(mir[i]), p=True)
-			spr = whi[0]
-			con = spr.strip('_L')
-			mrj.append(con)
-			jnt.append(con + '_R')
-			swt = swt + 1
+    if swt == 0:
+        return
+    elif swt == 1:
+        if j == len(coa):
+            return
 
-	mirrorNum()
+    cob = mc.listRelatives(coa[j], p=True)
+    coc = mc.listRelatives(cob[0])
 
-def mirrorCnt():
-	global rim, k
-	rim = rim + 1
-	k = k + 1
-	mirrorNum()
+    for i in coc:
+        if 'weighted' in '{}'.format(i):
+            if 'weighted_BL' in '{}'.format(i):
+                tar_trs = mc.getAttr('{}.tx'.format(i))
+        else:
+            sdv = i.replace('_L', '_R')
+            print sdv
 
-def mirrorNum():
-	global mrj, num, mnt, mir, whi
-	num = 0
+    j = j + 1
+    check()
 
-	for i in range(mnt):
-		if mrj[k] + '_weighted' in mir[i]:
-			num = num + 1
+def mirrorswt():
+    global swt, coa, k, j
+    swt = 1
+    con = list(range(0))
+    coa = list(range(0))
+    k = 0
+    j = 0
+    jnt = mc.ls(typ='joint')
 
-	mc.select('{}'.format(jnt[k]))
-	calculation()
+    for i in jnt:
+        if 'weighted' in '{}'.format(i):
+            con.append(i)
+
+    for i in con:    
+        if 'weighted_AL' in '{}'.format(i):
+            coa.append(i)
+            k = k + 1 
+
+    print con
+    mirror()
+
+def set_drv():
+    global sdv
+    sub = mc.ls(sl=True)
+    sdv = mc.textField(drv, e=True, text='{}'.format(sub[0]))
+
+def stt_set():
+    global sst, tar
+    sub = mc.ls(sl=True)
+    con = mc.listRelatives(sub[0])
+    sst = mc.textField(stt, e=True, text='{}'.format(sub[0]))
+    tar = mc.textField(end, e=True, text='{}'.format(con[0]))
+
+def end_set():
+    global sst, tar
+    sub = mc.ls(sl=True)
+    con = mc.listRelatives(sub[0], p=True)
+    sst = mc.textField(stt, e=True, text='{}'.format(con[0]))
+    tar = mc.textField(end, e=True, text='{}'.format(sub[0]))
 
 
 if mc.window('createWeighted', exists=True):
-	mc.deleteUI('createWeighted')
+    mc.deleteUI('createWeighted')
 
-createWin = mc.window('createWeighted', t='createWeighted', w=300, h=175)
+createWin = mc.window('createWeighted', t='createWeighted', w=300, h=200)
 mc.columnLayout(adj=True)
-mc.rowLayout(nc=2, w=300)
-mc.text('Create Weighted')
-txt = mc.intField('txt', v=0, w=175)
+
+mc.frameLayout(l='weighted')
+mc.rowLayout(nc=2, cat=[(1, 'left', 0), (2, 'left', 5)])
+mc.text(' Create many weighted : ')
+num = mc.intField('num', w=145)
+mc.setParent('..')
+mc.rowLayout(nc=3, cat=[(1, 'left', 0), (2, 'left', 5)])
+mc.text(' set drover :')
+drv = mc.textField('drv', w=170)
+mc.button(l='set', w=50, h=20, c='set_drv()')
+mc.setParent('..')
+
+mc.frameLayout(l='Range to create weighted')
+mc.rowLayout(nc=3, cat=[(1, 'left', 0), (2, 'left', 5)])
+mc.text('       start :')
+stt = mc.textField('stt', w=170)
+mc.button(l='set', w=50, h=20, c='stt_set()')
+mc.setParent('..')
+mc.rowLayout(nc=3, cat=[(1, 'left', 0), (2, 'left', 5)])
+mc.text('         end :')
+end = mc.textField('end', w=170)
+mc.button(l='set', w=50, h=20, c='end_set()')
 mc.setParent('..')
 
 mc.rowLayout(nc=2, w=300)
-mc.button(l='weighted', w=150, h=40, c='definition()')
-mc.button(l='mirror', w=150, h=40, c='mirror()')
+mc.button(l='weighted', w=150, h=40, c='preparation()')
+mc.button(l='mirror', w=150, h=40, c='mirrorswt()')
 mc.setParent('..')
 
 
